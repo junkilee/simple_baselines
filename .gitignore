@@ -1,3 +1,9 @@
+# Added by Jun Ki Lee (jun_ki_lee@brown.edu)
+logs
+nets
+test_summary
+.*.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
