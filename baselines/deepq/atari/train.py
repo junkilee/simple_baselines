@@ -219,7 +219,7 @@ if __name__ == '__main__':
                 obs = env.reset()
                 reset = True
 
-            if (num_iters > max(6 * args.batch_size, args.replay_buffer_size // 200) and # make it back to 20
+            if (num_iters > max(6 * args.batch_size, args.replay_buffer_size // 20) and
                     num_iters % args.learning_freq == 0):
                 # Sample a bunch of transitions from replay buffer
                 if args.prioritized:
