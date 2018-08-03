@@ -1,0 +1,7 @@
+gym[atari]==0.9.4
+scipy==1.1.0
+dill==0.2.7.1
+cloudpickle==0.5.3
+tensorflow-gpu==1.8.0
+opencv-python==3.4.1.15
+pyzmq==17.0.0
