@@ -103,8 +103,14 @@ if __name__ == '__main__':
     
     # Parse savedir.
     savedir = args.save_dir
+
     if savedir is None:
         savedir = os.getenv('OPENAI_LOGDIR', None)
+    try:
+        os.stat(savedir)
+    except:
+        os.mkdir(savedir)
+
     logger.configure(dir = args.log_dir, format_strs = ['stdout', 'log', 'json'])
     # Create and seed the env.
     env, monitored_env = make_env(args.env, args.clip_reward)
