@@ -9,19 +9,21 @@ def layer_norm_fn(x, relu=True):
     return x
 
 
-def model(img_in, num_actions, scope, reuse=False, layer_norm=False):
+def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
     """As described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf"""
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
         with tf.variable_scope("convnet"):
             # original architecture
-            out = layers.convolution2d(out, num_outputs=32, kernel_size=8, stride=4, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=4, stride=2, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+            out = layers.convolution2d(out, num_outputs=32//channel_factor, kernel_size=8, stride=4, activation_fn=tf.nn.relu)
+            if nlayers >= 2:
+                out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=4, stride=2, activation_fn=tf.nn.relu)
+            if nlayers >= 3:
+                out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
         conv_out = layers.flatten(out)
 
         with tf.variable_scope("action_value"):
-            value_out = layers.fully_connected(conv_out, num_outputs=512, activation_fn=None)
+            value_out = layers.fully_connected(conv_out, num_outputs=hidden_units, activation_fn=None)
             if layer_norm:
                 value_out = layer_norm_fn(value_out, relu=True)
             else:
@@ -30,29 +32,31 @@ def model(img_in, num_actions, scope, reuse=False, layer_norm=False):
         return value_out
 
 
-def dueling_model(img_in, num_actions, scope, reuse=False, layer_norm=False):
-    return dueling_test_model(img_in, num_actions, scope, reuse, layer_norm)['q']
+def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
+    return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm)['q']
 
-def dueling_test_model(img_in, num_actions, scope, reuse=False, layer_norm=False):
+def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
     """As described in https://arxiv.org/abs/1511.06581"""
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
         with tf.variable_scope("convnet"):
             # original architecture
-            out = layers.convolution2d(out, num_outputs=32, kernel_size=8, stride=4, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=4, stride=2, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+            out = layers.convolution2d(out, num_outputs=32//channel_factor, kernel_size=8, stride=4, activation_fn=tf.nn.relu)
+            if nlayers >= 2:
+                out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=4, stride=2, activation_fn=tf.nn.relu)
+            if nlayers >= 3:
+                out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
         conv_out = layers.flatten(out)
 
         with tf.variable_scope("state_value"):
-            state_hidden = layers.fully_connected(conv_out, num_outputs=512, activation_fn=None)
+            state_hidden = layers.fully_connected(conv_out, num_outputs=hidden_units, activation_fn=None)
             if layer_norm:
                 state_hidden = layer_norm_fn(state_hidden, relu=True)
             else:
                 state_hidden = tf.nn.relu(state_hidden)
             state_score = layers.fully_connected(state_hidden, num_outputs=1, activation_fn=None)
         with tf.variable_scope("action_value"):
-            actions_hidden = layers.fully_connected(conv_out, num_outputs=512, activation_fn=None)
+            actions_hidden = layers.fully_connected(conv_out, num_outputs=hidden_units, activation_fn=None)
             if layer_norm:
                 actions_hidden = layer_norm_fn(actions_hidden, relu=True)
             else:

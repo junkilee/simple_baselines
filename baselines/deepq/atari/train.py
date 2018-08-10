@@ -60,6 +60,9 @@ def parse_args():
     parser.add_argument("--log-dir", type=str, default="./logs/", help="directory in which log files should be saved")
     boolean_flag(parser, "early-save", default=True, help="detemrines whether to save early networks below 1e6 steps")
     boolean_flag(parser, "random-start", default=True, help="whether or not to add random action choices in the beginning of an agent's trial)")
+    parser.add_argument("--n-layers", type=int, default=3, help="the number of layers used for the training network")
+    parser.add_argument("--hidden-units", type=int, default=512, help="the number of hidden units used for the training network")
+    parser.add_argument("--channel-factor", type=int, default=1, help="the factor that is used to divide the number of channels")
     return parser.parse_args()
 
 
@@ -131,7 +134,7 @@ if __name__ == '__main__':
         # Create training graph and replay buffer
         def model_wrapper(img_in, num_actions, scope, **kwargs):
             actual_model = dueling_model if args.dueling else model
-            return actual_model(img_in, num_actions, scope, layer_norm=args.layer_norm, **kwargs)
+            return actual_model(img_in, num_actions, scope, nlayers = args.n_layers, hidden_units = args.hidden_units, channel_factor = args.channel_factor, layer_norm=args.layer_norm, **kwargs)
         act, train, update_target, debug = deepq.build_train(
             make_obs_ph=lambda name: U.Uint8Input(env.observation_space.shape, name=name),
             q_func=model_wrapper,
@@ -219,7 +222,7 @@ if __name__ == '__main__':
                 obs = env.reset()
                 reset = True
 
-            if (num_iters > max(6 * args.batch_size, args.replay_buffer_size // 20) and
+            if (num_iters > max(6 * args.batch_size, args.replay_buffer_size // 200) and
                     num_iters % args.learning_freq == 0):
                 # Sample a bunch of transitions from replay buffer
                 if args.prioritized:
