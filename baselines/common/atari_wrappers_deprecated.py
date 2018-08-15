@@ -219,13 +219,13 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 #     env = FrameStack(env, 4)
 #     env = ClippedRewardsWrapper(env)
 #     return env
-def wrap_dqn(env, noop = None, clip = True):
+def wrap_dqn(env, noop = None, clip = True, skip = 4):
     """Apply a common set of wrappers for Atari games."""
     assert 'NoFrameskip' in env.spec.id
     env = EpisodicLifeEnv(env)
     if noop is not None:
         env = NoopResetEnv(env, noop_max=noop)
-    env = MaxAndSkipEnv(env, skip=4)
+    env = MaxAndSkipEnv(env, skip=skip)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = ProcessFrame84(env)
