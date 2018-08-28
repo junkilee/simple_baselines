@@ -9,7 +9,7 @@ def layer_norm_fn(x, relu=True):
     return x
 
 
-def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
+def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
     """As described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf"""
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
@@ -21,6 +21,8 @@ def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_f
             if nlayers >= 3:
                 out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
         conv_out = layers.flatten(out)
+        if freeze_cnn:
+            conv_out = tf.stop_gradient(conv_out)
 
         with tf.variable_scope("action_value"):
             value_out = layers.fully_connected(conv_out, num_outputs=hidden_units, activation_fn=None)
@@ -32,7 +34,7 @@ def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_f
         return value_out
 
 
-def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
+def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
     return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm)['q']
 
 def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
@@ -47,6 +49,8 @@ def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 5
             if nlayers >= 3:
                 out = layers.convolution2d(out, num_outputs=64//channel_factor, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
         conv_out = layers.flatten(out)
+        if freeze_cnn:
+            conv_out = tf.stop_gradient(conv_out)
 
         with tf.variable_scope("state_value"):
             state_hidden = layers.fully_connected(conv_out, num_outputs=hidden_units, activation_fn=None)
