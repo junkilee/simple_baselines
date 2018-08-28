@@ -165,7 +165,7 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
                          updates=[update_eps_expr])
         return act
 
-def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
+def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, test_epsilon=0.0):
     """Creates the act function:
 
     Parameters
@@ -217,7 +217,7 @@ def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
                          outputs=[output_actions, q_values, s_value, a_values, update_eps_expr],
-                         givens={update_eps_ph: 0.01, stochastic_ph: False},
+                         givens={update_eps_ph: test_epsilon, stochastic_ph: False},
                          updates=[update_eps_expr])
         return act
 
