@@ -35,9 +35,9 @@ def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_f
 
 
 def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
-    return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm)['q']
+    return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm, freeze_cnn)['q']
 
-def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False):
+def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
     """As described in https://arxiv.org/abs/1511.06581"""
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
