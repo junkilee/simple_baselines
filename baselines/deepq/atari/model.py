@@ -9,8 +9,10 @@ def layer_norm_fn(x, relu=True):
     return x
 
 
-def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
+def model(img_in, num_actions, scope, nlayers=3, hidden_units=512, channel_factor=1,
+          reuse=False, layer_norm=False, freeze_cnn=False, use_ltl_wrapper=False, num_task_states=1):
     """As described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf"""
+    assert(num_task_states != use_ltl_wrapper)
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
         with tf.variable_scope("convnet"):
@@ -30,11 +32,16 @@ def model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_f
                 value_out = layer_norm_fn(value_out, relu=True)
             else:
                 value_out = tf.nn.relu(value_out)
-            value_out = layers.fully_connected(value_out, num_outputs=num_actions, activation_fn=None)
+            if use_ltl_wrapper:
+                value_out = layers.fully_connected(value_out, num_outputs=num_actions * num_task_states, activation_fn=None)
+            else:
+                value_out = layers.fully_connected(value_out, num_outputs=num_actions, activation_fn=None)
+
         return value_out
 
 
 def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
+    # TODO LTLify this
     return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm, freeze_cnn)['q']
 
 def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
