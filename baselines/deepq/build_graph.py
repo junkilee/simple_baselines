@@ -869,8 +869,8 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
                 rew_t_ph,
                 obs_tp1_input,
                 done_mask_ph,
-                importance_weights_ph,
-                transition_mats_ph
+                transition_mats_ph,
+                importance_weights_ph
             ],
             outputs=td_error,
             updates=[optimize_expr]
