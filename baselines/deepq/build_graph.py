@@ -482,7 +482,10 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
             q_tp1_best = tf.reduce_sum(q_tp1 * tf.one_hot(q_tp1_best_using_online_net, num_actions), 1)
         else:
             q_tp1_best = tf.reduce_max(q_tp1, 1)
+
+        print("q_tp1_best:", q_tp1_best.shape)
         q_tp1_best_masked = (1.0 - done_mask_ph) * q_tp1_best
+        print("q_tp1_best_masked:", q_tp1_best_masked.shape)
 
         # compute RHS of bellman equation
         q_t_selected_target = rew_t_ph + gamma * q_tp1_best_masked
@@ -492,6 +495,7 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
         print("td error:", td_error.shape)
         errors = U.huber_loss(td_error)
         weighted_error = tf.reduce_mean(importance_weights_ph * errors)
+        print("weighted error:", weighted_error.shape)
 
         # compute optimization op (potentially with gradient clipping)
         if grad_norm_clipping is not None:
@@ -632,7 +636,8 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
         # q scores for actions which we know were selected in the given state.
         # shape should be [-1, num_task_states]
-        q_t_selected = tf.reduce_sum(q_t * tf.one_hot(act_t_ph, num_actions), 2)
+        q_chosen_inds = tf.expand_dims(tf.one_hot(act_t_ph, num_actions), -1)
+        q_t_selected = tf.squeeze(tf.matmul(q_t, q_chosen_inds))
         print("q_t_selected shape: ", q_t_selected.shape)
         # compute estimate of best possible value starting from state at t + 1
         if double_q:
@@ -648,13 +653,16 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
             #  so this is array [Q((s, x_1), _), ... , Q((s, x_n), _)] for each inputted s.
 
         print("done_mask shape:", done_mask_ph.shape)
-        q_tp1_best_masked = (1.0 - done_mask_ph) * q_tp1_best  # is this necessary?
+        q_tp1_best_masked = tf.transpose((1.0 - done_mask_ph) * tf.transpose(q_tp1_best))  # is this necessary?
         print("q_tp1_best_masked shape:", q_tp1_best_masked.shape)
         print("transition_mats_ph shape:", transition_mats_ph.shape)
 
         q_tp1_best_masked_xprime_expectation = tf.transpose(tf.reduce_sum(
             tf.multiply(tf.transpose(transition_mats_ph, [1, 0, 2]),
                         q_tp1_best_masked), axis=2))
+
+        print("q_tp1_best_masked_xprime_expectation shape:", q_tp1_best_masked_xprime_expectation.shape)
+
         # compute RHS of bellman equation
 
         # target with combined planning/q-learning thing: ???
@@ -703,6 +711,9 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         # shape: [bs, num_task_states, num_task_states], [num_task_states, num_task_states]
         #           -> [bs, num_task_states]
         reward_x = tf.reduce_sum(tf.multiply(transition_mats_ph, reward_mat), axis=2)
+
+        print("reward_x shape:", reward_x.shape)
+
         # def reward(x, next_x):
         #     """
         #     Method to return the reward R(x, x').
@@ -801,6 +812,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
         # dims: [bs, num_task_states]
         q_t_selected_target = reward_x + gamma * q_tp1_best_masked_xprime_expectation
+        print("q_t_selected_target shape:", q_t_selected_target.shape)
 
         """
         BIGGEST QUESTION NOW:
@@ -842,9 +854,17 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
         # compute the error (potentially clipped)
         td_error = q_t_selected - tf.stop_gradient(q_t_selected_target)
-        errors = U.huber_loss(td_error)
-        weighted_error = tf.reduce_mean(importance_weights_ph * errors)
+        print("td_error shape:", td_error.shape)
 
+        errors = U.huber_loss(td_error)
+        print("errors shape:", errors.shape)
+        print("importance_weights_ph shape:", importance_weights_ph.shape)
+        errors_summed_across_tasks = tf.reduce_sum(errors, axis=1)
+        print("errors_summed_across_tasks shape:", errors_summed_across_tasks.shape)
+
+        # importance_weights * errors => [bs] * [bs, num_task_states]
+        weighted_error = tf.reduce_mean(importance_weights_ph * errors_summed_across_tasks)
+        print("weighted error:", weighted_error.shape)
         # compute optimization op (potentially with gradient clipping)
         if grad_norm_clipping is not None:
             optimize_expr = U.minimize_and_clip(optimizer,

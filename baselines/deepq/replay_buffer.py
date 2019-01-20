@@ -341,8 +341,10 @@ class PrioritizedReplayBufferGLTL(ReplayBufferGLTL):
         """
         assert len(idxes) == len(priorities)
         for idx, priority in zip(idxes, priorities):
-            assert priority > 0
+            print("priority", type(priority))
+            assert np.all(priority > 0)
             assert 0 <= idx < len(self._storage)
+            # print("self._it_min", self._it_min.shape)
             self._it_sum[idx] = priority ** self._alpha
             self._it_min[idx] = priority ** self._alpha
 
