@@ -40,11 +40,17 @@ def model(img_in, num_actions, scope, nlayers=3, hidden_units=512, channel_facto
         return value_out
 
 
-def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
+def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512,
+                  channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False,
+                  use_ltl_wrapper=False, num_task_states=1):
     # TODO LTLify this
-    return dueling_test_model(img_in, num_actions, scope, nlayers, hidden_units, channel_factor, reuse, layer_norm, freeze_cnn)['q']
+    return dueling_test_model(img_in, num_actions, scope, nlayers,
+                              hidden_units, channel_factor, reuse,
+                              layer_norm, freeze_cnn, use_ltl_wrapper, num_task_states)['q']
 
-def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512, channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False):
+def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512,
+                       channel_factor = 1, reuse=False, layer_norm=False,
+                       freeze_cnn = False, use_ltl_wrapper=False, num_task_states=1):
     """As described in https://arxiv.org/abs/1511.06581"""
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
@@ -72,7 +78,12 @@ def dueling_test_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 5
                 actions_hidden = layer_norm_fn(actions_hidden, relu=True)
             else:
                 actions_hidden = tf.nn.relu(actions_hidden)
-            action_scores = layers.fully_connected(actions_hidden, num_outputs=num_actions, activation_fn=None)
+            if use_ltl_wrapper:
+                action_scores = layers.fully_connected(actions_hidden,
+                                                       num_outputs=num_actions * num_task_states,
+                                                       activation_fn=None)
+            else:
+                action_scores = layers.fully_connected(actions_hidden, num_outputs=num_actions, activation_fn=None)
             action_scores_mean = tf.reduce_mean(action_scores, 1)
             action_scores = action_scores - tf.expand_dims(action_scores_mean, 1)
         return {'q': state_score + action_scores, 's': state_score, 'a': action_scores}
