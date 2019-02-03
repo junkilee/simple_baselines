@@ -43,7 +43,6 @@ def model(img_in, num_actions, scope, nlayers=3, hidden_units=512, channel_facto
 def dueling_model(img_in, num_actions, scope, nlayers = 3, hidden_units = 512,
                   channel_factor = 1, reuse=False, layer_norm=False, freeze_cnn = False,
                   use_ltl_wrapper=False, num_task_states=1):
-    # TODO LTLify this
     return dueling_test_model(img_in, num_actions, scope, nlayers,
                               hidden_units, channel_factor, reuse,
                               layer_norm, freeze_cnn, use_ltl_wrapper, num_task_states)['q']
