@@ -334,7 +334,11 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
                          updates=updates)
         return act
 
-def build_act_ltl(make_obs_ph, q_func, num_actions, num_task_states, scope="deepq", reuse=None):
+
+def build_act_ltl(make_obs_ph,
+                  q_func,
+                  num_actions,
+                  num_task_states, scope="deepq", reuse=None):
     """Creates the act function:
 
     Parameters
@@ -392,7 +396,9 @@ def build_act_ltl(make_obs_ph, q_func, num_actions, num_task_states, scope="deep
                          updates=[update_eps_expr])
         return act
 
-def build_act_ltl_test(make_obs_ph, q_func, num_actions, num_task_states, scope="deepq", reuse=None):
+
+def build_act_ltl_test(make_obs_ph, q_func, num_actions,
+                       num_task_states, scope="deepq", reuse=None):
     """Creates the act function:
     TODO this doesn't work I think
     Parameters
