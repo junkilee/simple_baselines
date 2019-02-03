@@ -38,7 +38,8 @@ with tf.Session() as sess:
     # print(tf.reduce_mean(a * tf.reduce_sum(b, axis=1)).eval())
 
 
-    # # selected qs (one hot stuff)
+    """
+    # selected qs (one hot stuff)
     a = [[[1.,2],
           [3,4]],
          [[5,6],
@@ -51,12 +52,10 @@ with tf.Session() as sess:
     # shape= (3,2)
     result = tf.squeeze(tf.matmul(a, result))
     print(result.eval())
-    # print(tf.nn.embedding_lookup(tf.to_float(tf.transpose(a)), chosen).eval())
-    # coh = tf.one_hot(chosen, depth=2)
-    # print(tf.reduce_sum((a * tf.stack([coh, coh], axis=1)), axis = 2).eval())
-    # expected: [[1,3], [6,7], [9,11]], shape = [bs, x]
+    # expected: [[1,3], [6,8], [10,12]], shape = [bs, x]
+    """
 
-
+    """
     # broadcasting
     #   x = tf.constant([1, 2, 3])
     # y = tf.broadcast_to(x, [3, 3]).eval()
@@ -64,3 +63,23 @@ with tf.Session() as sess:
     # array([[1, 2, 3],
     #        [1, 2, 3],
     #        [1, 2, 3]], dtype=int32)
+    """
+
+    """
+    action selection for test sampling:
+    ([bs, num_task_states, num_actions], [bs]) --something-> [bs, num_actions] --argmax-> [bs]
+    """
+
+    a = [[[1.,2],
+          [3,4]],
+         [[5,6],
+          [7,8]],
+         [[9,100],
+          [35,12]]]
+
+    chosen = [0, 1, 1]
+    chosen_one_hot = tf.one_hot(indices=chosen, depth=2)
+    result = tf.transpose(tf.reduce_sum(chosen_one_hot * tf.transpose(a, [2,0,1]), axis=-1))
+    result_actions = tf.argmax(result, axis=1)
+
+    print(result_actions.eval())

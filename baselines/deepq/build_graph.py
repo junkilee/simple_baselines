@@ -97,6 +97,7 @@ import tensorflow as tf
 import numpy as np
 import baselines.common.tf_util as U
 
+
 def default_param_noise_filter(var):
     if var not in tf.trainable_variables():
         # We never perturb non-trainable vars.
@@ -149,7 +150,7 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
-        #TODO do I have to fix something here? yes.
+        # TODO do I have to fix something here? yes.
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
         deterministic_actions = tf.argmax(q_values, axis=1)
 
@@ -165,6 +166,7 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
+
 
 def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, test_epsilon=0.0):
     """Creates the act function:
@@ -222,7 +224,9 @@ def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, 
                          updates=[update_eps_expr])
         return act
 
-def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, param_noise_filter_func=None):
+
+def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None,
+                               param_noise_filter_func=None):
     """Creates the act function with support for parameter space noise exploration (https://arxiv.org/abs/1706.01905):
 
     Parameters
@@ -267,14 +271,17 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         reset_ph = tf.placeholder(tf.bool, (), name="reset")
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
-        param_noise_scale = tf.get_variable("param_noise_scale", (), initializer=tf.constant_initializer(0.01), trainable=False)
-        param_noise_threshold = tf.get_variable("param_noise_threshold", (), initializer=tf.constant_initializer(0.05), trainable=False)
+        param_noise_scale = tf.get_variable("param_noise_scale", (), initializer=tf.constant_initializer(0.01),
+                                            trainable=False)
+        param_noise_threshold = tf.get_variable("param_noise_threshold", (), initializer=tf.constant_initializer(0.05),
+                                                trainable=False)
 
         # Unmodified Q.
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
 
         # Perturbable Q used for the actual rollout.
         q_values_perturbed = q_func(observations_ph.get(), num_actions, scope="perturbed_q_func")
+
         # We have to wrap this code into a function due to the way tf.cond() works. See
         # https://stackoverflow.com/questions/37063952/confused-by-the-behavior-of-tf-cond for
         # a more detailed discussion.
@@ -286,7 +293,8 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
             for var, perturbed_var in zip(all_vars, all_perturbed_vars):
                 if param_noise_filter_func(perturbed_var):
                     # Perturb this variable.
-                    op = tf.assign(perturbed_var, var + tf.random_normal(shape=tf.shape(var), mean=0., stddev=param_noise_scale))
+                    op = tf.assign(perturbed_var,
+                                   var + tf.random_normal(shape=tf.shape(var), mean=0., stddev=param_noise_scale))
                 else:
                     # Do not perturb, just assign.
                     op = tf.assign(perturbed_var, var)
@@ -299,19 +307,23 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         # is too big, reduce scale of perturbation, otherwise increase.
         q_values_adaptive = q_func(observations_ph.get(), num_actions, scope="adaptive_q_func")
         perturb_for_adaption = perturb_vars(original_scope="q_func", perturbed_scope="adaptive_q_func")
-        kl = tf.reduce_sum(tf.nn.softmax(q_values) * (tf.log(tf.nn.softmax(q_values)) - tf.log(tf.nn.softmax(q_values_adaptive))), axis=-1)
+        kl = tf.reduce_sum(
+            tf.nn.softmax(q_values) * (tf.log(tf.nn.softmax(q_values)) - tf.log(tf.nn.softmax(q_values_adaptive))),
+            axis=-1)
         mean_kl = tf.reduce_mean(kl)
+
         def update_scale():
             with tf.control_dependencies([perturb_for_adaption]):
                 update_scale_expr = tf.cond(mean_kl < param_noise_threshold,
-                    lambda: param_noise_scale.assign(param_noise_scale * 1.01),
-                    lambda: param_noise_scale.assign(param_noise_scale / 1.01),
-                )
+                                            lambda: param_noise_scale.assign(param_noise_scale * 1.01),
+                                            lambda: param_noise_scale.assign(param_noise_scale / 1.01),
+                                            )
             return update_scale_expr
 
         # Functionality to update the threshold for parameter space noise.
         update_param_noise_threshold_expr = param_noise_threshold.assign(tf.cond(update_param_noise_threshold_ph >= 0,
-            lambda: update_param_noise_threshold_ph, lambda: param_noise_threshold))
+                                                                                 lambda: update_param_noise_threshold_ph,
+                                                                                 lambda: param_noise_threshold))
 
         # Put everything together.
         deterministic_actions = tf.argmax(q_values_perturbed, axis=1)
@@ -324,14 +336,18 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
         updates = [
             update_eps_expr,
-            tf.cond(reset_ph, lambda: perturb_vars(original_scope="q_func", perturbed_scope="perturbed_q_func"), lambda: tf.group(*[])),
+            tf.cond(reset_ph, lambda: perturb_vars(original_scope="q_func", perturbed_scope="perturbed_q_func"),
+                    lambda: tf.group(*[])),
             tf.cond(update_param_noise_scale_ph, lambda: update_scale(), lambda: tf.Variable(0., trainable=False)),
             update_param_noise_threshold_expr,
         ]
-        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, reset_ph, update_param_noise_threshold_ph, update_param_noise_scale_ph],
-                         outputs=output_actions,
-                         givens={update_eps_ph: -1.0, stochastic_ph: True, reset_ph: False, update_param_noise_threshold_ph: False, update_param_noise_scale_ph: False},
-                         updates=updates)
+        act = U.function(
+            inputs=[observations_ph, stochastic_ph, update_eps_ph, reset_ph, update_param_noise_threshold_ph,
+                    update_param_noise_scale_ph],
+            outputs=output_actions,
+            givens={update_eps_ph: -1.0, stochastic_ph: True, reset_ph: False, update_param_noise_threshold_ph: False,
+                    update_param_noise_scale_ph: False},
+            updates=updates)
         return act
 
 
@@ -377,11 +393,80 @@ def build_act_ltl(make_obs_ph,
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
-        #TODO do I have to fix something here? yes.
+        # TODO do I have to fix something here? yes.
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
-
+        print("q_values:", q_values.shape)
         # if reshaped, q_values would be [-1, num_task_states, num_actions]
         deterministic_actions = tf.argmax(q_values, axis=-1) % num_actions
+
+        batch_size = tf.shape(observations_ph.get())[0]
+        random_actions = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=num_actions, dtype=tf.int64)
+        chose_random = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=1, dtype=tf.float32) < eps
+        stochastic_actions = tf.where(chose_random, random_actions, deterministic_actions)
+
+        output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
+        update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
+        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
+                         outputs=[output_actions, update_eps_expr, eps],
+                         givens={update_eps_ph: -1.0, stochastic_ph: True},
+                         updates=[update_eps_expr])
+        return act
+
+
+def build_act_ltl_test_sample(make_obs_ph, q_func, num_actions, num_task_states, scope="deepq", reuse=None):
+    """Creates the act function by using a sample of the x states the thing is currently in:
+    Parameters
+    ----------
+    make_obs_ph: str -> tf.placeholder or TfInput
+        a function that take a name and creates a placeholder of input with that name
+    q_func: (tf.Variable, int, str, bool) -> tf.Variable
+        the model that takes the following inputs:
+            observation_in: object
+                the output of observation placeholder
+            num_actions: int
+                number of actions
+            scope: str
+            reuse: bool
+                should be passed to outer variable scope
+        and returns a tensor of shape (batch_size, num_actions) with values of every action.
+    num_actions: int
+        number of actions.
+    num_task_states: int
+        number of states in task MDP
+    scope: str or VariableScope
+        optional scope for variable_scope.
+    reuse: bool or None
+        whether or not the variables should be reused. To be able to reuse the scope must be given.
+
+    Returns
+    -------
+    act: (tf.Variable, bool, float) -> tf.Variable
+        function to select and action given observation.
+`       See the top of the file for details.
+    """
+    with tf.variable_scope(scope, reuse=reuse):
+        observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
+        observations_task_ph = tf.placeholder(tf.int32, [None], name="task_obs")
+        stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
+        update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
+
+        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
+
+        # TODO do I have to fix something here? yes.
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
+
+        # q_values shape: [-1, num_task_states, num_actions]
+        q_values = tf.reshape(q_values, [-1, num_task_states, num_actions])
+
+        task_obs_one_hot = tf.one_hot(indices=observations_task_ph, depth=num_task_states)
+        print("task_obs_one_hot:", task_obs_one_hot.shape)
+
+        q_values_per_task_state = tf.transpose(
+            tf.reduce_sum(task_obs_one_hot * tf.transpose(q_values, [2, 0, 1]), axis=-1))
+        print("q_values_per_task_state:", q_values_per_task_state.shape)
+        deterministic_actions = tf.argmax(q_values_per_task_state, axis=1)
+        print("deterministic_actions:", deterministic_actions.shape)
+        # deterministic_actions = tf.argmax(q_values, axis=-1) % num_actions
 
         batch_size = tf.shape(observations_ph.get())[0]
         random_actions = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=num_actions, dtype=tf.int64)
@@ -437,7 +522,7 @@ def build_act_ltl_test(make_obs_ph, q_func, num_actions,
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
-        #TODO do I have to fix something here? yes.
+        # TODO do I have to fix something here? yes.
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
 
         # if reshaped, q_values would be [-1, num_task_states, num_actions]
@@ -458,7 +543,7 @@ def build_act_ltl_test(make_obs_ph, q_func, num_actions,
 
 
 def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0,
-    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
+                double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
     """Creates the train function:
 
     Parameters
@@ -514,7 +599,7 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
     """
     if param_noise:
         act_f = build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse,
-            param_noise_filter_func=param_noise_filter_func)
+                                           param_noise_filter_func=param_noise_filter_func)
     else:
         act_f = build_act(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
 
@@ -598,7 +683,7 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
 
 
 def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, grad_norm_clipping=None, gamma=1.0,
-    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
+                    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
     """Creates the train function:
 
     Parameters
@@ -656,7 +741,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
     """
     if param_noise:
         act_f = build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse,
-            param_noise_filter_func=param_noise_filter_func)
+                                           param_noise_filter_func=param_noise_filter_func)
     else:
         act_f = build_act_ltl(make_obs_ph, q_func, num_actions, num_task_states, scope=scope, reuse=reuse)
 
@@ -670,7 +755,6 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         importance_weights_ph = tf.placeholder(tf.float32, [None], name="weight")
         # placeholder for classified task states.
         transition_mats_ph = tf.placeholder(tf.float32, [None, num_task_states, num_task_states], name="trans_mats")
-
 
         # q network evaluation
         # new shape of qfunc output: |A| x |X| x batch_size
@@ -695,8 +779,6 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         q_tp1 = tf.reshape(q_tp1, [-1, num_task_states, num_actions])
         print("tp1 shape:", q_tp1.shape)
         target_q_func_vars = U.scope_vars(U.absolute_scope_name("target_q_func"))
-
-
 
         # q scores for actions which we know were selected in the given state.
         # shape should be [-1, num_task_states]
@@ -810,8 +892,6 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         #     for next_x in range(0, num_task_states):
         #         total += reward(x, next_x) * transition_mats[classify(next_state)][x][next_x]
         #     return total
-
-
 
         # What do we have?
         #   - we have s, a, r, s' (an experience or transition sampled from the real dynamics by playing the game)
