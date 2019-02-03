@@ -65,21 +65,37 @@ with tf.Session() as sess:
     #        [1, 2, 3]], dtype=int32)
     """
 
+    # """
+    # action selection for test sampling:
+    # ([bs, num_task_states, num_actions], [bs]) --something-> [bs, num_actions] --argmax-> [bs]
+    # """
+    #
+    # a = [[[1.,2],
+    #       [3,4]],
+    #      [[5,6],
+    #       [7,8]],
+    #      [[9,100],
+    #       [35,12]]]
+    #
+    # chosen = [0, 1, 1]
+    # chosen_one_hot = tf.one_hot(indices=chosen, depth=2)
+    # result = tf.transpose(tf.reduce_sum(chosen_one_hot * tf.transpose(a, [2,0,1]), axis=-1))
+    # result_actions = tf.argmax(result, axis=1)
+    #
+    # print(result_actions.eval())
+
     """
-    action selection for test sampling:
-    ([bs, num_task_states, num_actions], [bs]) --something-> [bs, num_actions] --argmax-> [bs]
+    action selection for test sampling without fancy matrix mult stuff:
+    ([bs, num_task_states, num_actions], [bs]) --selection-> [bs, num_actions] --argmax-> [bs]
     """
+    a = tf.constant([[[1., 2],
+          [3, 4]],
+         [[5, 6],
+          [7, 8]],
+         [[9, 100],
+          [35, 12]]])
 
-    a = [[[1.,2],
-          [3,4]],
-         [[5,6],
-          [7,8]],
-         [[9,100],
-          [35,12]]]
-
-    chosen = [0, 1, 1]
-    chosen_one_hot = tf.one_hot(indices=chosen, depth=2)
-    result = tf.transpose(tf.reduce_sum(chosen_one_hot * tf.transpose(a, [2,0,1]), axis=-1))
-    result_actions = tf.argmax(result, axis=1)
-
-    print(result_actions.eval())
+    task_state = tf.Variable(0)
+    sliced_by_state = a[:,0,:]
+    result = tf.argmax(sliced_by_state, axis=1)
+    print(result.eval())

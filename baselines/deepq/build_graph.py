@@ -446,23 +446,17 @@ def build_act_ltl_test_sample(make_obs_ph, q_func, num_actions, num_task_states,
     """
     with tf.variable_scope(scope, reuse=reuse):
         observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
-        observations_task_ph = tf.placeholder(tf.int32, [None], name="task_obs")
+        task_state_ph = tf.placeholder(tf.int32, (), name="task_obs")
         stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
         update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
-
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
-        # TODO do I have to fix something here? yes.
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
 
         # q_values shape: [-1, num_task_states, num_actions]
         q_values = tf.reshape(q_values, [-1, num_task_states, num_actions])
 
-        task_obs_one_hot = tf.one_hot(indices=observations_task_ph, depth=num_task_states)
-        print("task_obs_one_hot:", task_obs_one_hot.shape)
-
-        q_values_per_task_state = tf.transpose(
-            tf.reduce_sum(task_obs_one_hot * tf.transpose(q_values, [2, 0, 1]), axis=-1))
+        q_values_per_task_state = q_values[:, task_state_ph, :]
         print("q_values_per_task_state:", q_values_per_task_state.shape)
         deterministic_actions = tf.argmax(q_values_per_task_state, axis=1)
         print("deterministic_actions:", deterministic_actions.shape)
@@ -475,7 +469,7 @@ def build_act_ltl_test_sample(make_obs_ph, q_func, num_actions, num_task_states,
 
         output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
-        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
+        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, task_state_ph],
                          outputs=[output_actions, update_eps_expr, eps],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
@@ -749,7 +743,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         # set up placeholders
         obs_t_input = U.ensure_tf_input(make_obs_ph("obs_t"))
         act_t_ph = tf.placeholder(tf.int32, [None], name="action")
-        rew_t_ph = tf.placeholder(tf.float32, [None], name="reward")
+        rew_t_ph = tf.placeholder(tf.float32, [None], name="reward")  # this is actually never used in this fct/LTL training!
         obs_tp1_input = U.ensure_tf_input(make_obs_ph("obs_tp1"))
         done_mask_ph = tf.placeholder(tf.float32, [None], name="done")
         importance_weights_ph = tf.placeholder(tf.float32, [None], name="weight")
