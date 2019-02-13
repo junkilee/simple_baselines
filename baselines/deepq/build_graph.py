@@ -475,7 +475,7 @@ def build_act_ltl_test_sample(make_obs_ph, q_func, num_actions, num_task_states,
                          updates=[update_eps_expr])
         return act
 
-
+# TODO make expectation based action selection
 def build_act_ltl_test(make_obs_ph, q_func, num_actions,
                        num_task_states, scope="deepq", reuse=None):
     """Creates the act function:
@@ -676,7 +676,7 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
         return act_f, train, update_target, {'q_values': q_values}
 
 
-def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, grad_norm_clipping=None, gamma=1.0,
+def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, acc_index, grad_norm_clipping=None, gamma=1.0,
                     double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
     """Creates the train function:
 
@@ -846,7 +846,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         # generate reward matrix (encoding R(x, x') formula)
         reward_mat = np.zeros([num_task_states, num_task_states])
         for x in range(1, num_task_states - 1):
-            reward_mat[x][0] = 1
+            reward_mat[x][acc_index] = 1
 
         # shape: [bs, num_task_states, num_task_states], [num_task_states, num_task_states]
         #           -> [bs, num_task_states]
