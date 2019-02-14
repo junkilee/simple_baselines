@@ -84,9 +84,25 @@ with tf.Session() as sess:
     #
     # print(result_actions.eval())
 
+    # """
+    # action selection for test sampling without fancy matrix mult stuff:
+    # ([bs, num_task_states, num_actions], [bs]) --selection-> [bs, num_actions] --argmax-> [bs]
+    # """
+    # a = tf.constant([[[1., 2],
+    #       [3, 4]],
+    #      [[5, 6],
+    #       [7, 8]],
+    #      [[9, 100],
+    #       [35, 12]]])
+    #
+    # task_state = tf.Variable(0)
+    # sliced_by_state = a[:,0,:]
+    # result = tf.argmax(sliced_by_state, axis=1)
+    # print(result.eval())
+
     """
-    action selection for test sampling without fancy matrix mult stuff:
-    ([bs, num_task_states, num_actions], [bs]) --selection-> [bs, num_actions] --argmax-> [bs]
+    action selection using expectations:
+    ([bs, num_task_states, num_actions], [num_task_states]) --selection-> [bs, num_actions] --argmax-> [bs]
     """
     a = tf.constant([[[1., 2],
           [3, 4]],
@@ -94,8 +110,8 @@ with tf.Session() as sess:
           [7, 8]],
          [[9, 100],
           [35, 12]]])
-
+    p = [0.5, 0.5]
     task_state = tf.Variable(0)
-    sliced_by_state = a[:,0,:]
-    result = tf.argmax(sliced_by_state, axis=1)
+    result = tf.matmul(tf.transpose(p), tf.transpose(a, [0, 2, 1]))
+    # result = tf.argmax(sliced_by_state, axis=1)
     print(result.eval())
