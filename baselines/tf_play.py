@@ -103,15 +103,34 @@ with tf.Session() as sess:
     """
     action selection using expectations:
     ([bs, num_task_states, num_actions], [num_task_states]) --selection-> [bs, num_actions] --argmax-> [bs]
+    
+    getting the next_prob_task_state vector:
+    ([num_task_states], [num_task_states, num_task_states]) --> [num_task_states] 
     """
-    a = tf.constant([[[1., 2],
-          [3, 4]],
-         [[5, 6],
-          [7, 8]],
-         [[9, 100],
-          [35, 12]]])
-    p = [0.5, 0.5]
-    task_state = tf.Variable(0)
-    result = tf.matmul(tf.transpose(p), tf.transpose(a, [0, 2, 1]))
-    # result = tf.argmax(sliced_by_state, axis=1)
-    print(result.eval())
+    a = tf.constant([[[1., 2, 10],
+          [3, 4, 10]],
+         [[5, 6, 10],
+          [7, 8, 10]],
+         [[9, 100, 10],
+          [35, 12, 10]]])
+    p = tf.constant([0.5, 0.5])
+    trans_mat = tf.constant([[0.1, 0.9], [1, 0]])
+    expected_q_values_across_states = tf.tensordot(p, a, axes=[0, 1])
+
+    # expected expected_q_values_across_states:
+    # [[ 2.  3. 10.]
+    #  [ 6.  7. 10.]
+    #  [22. 56. 10.]]
+
+    best_actions = tf.argmax(expected_q_values_across_states, axis=-1)
+
+    # expected actions:
+    # [2, 2, 1]
+
+    print("Best actions per batch element:", best_actions.eval())
+
+    next_p = tf.tensordot(p, trans_mat, axes=1)
+    # expected next_p:
+    # [0.55, 0.45]
+    print("Next probabilities:", next_p.eval())
+
