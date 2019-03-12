@@ -488,7 +488,6 @@ def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
                        num_task_states, scope="deepq", reuse=None):
     """Creates the act function:
     EXPECTATION-BASED
-    TODO this doesn't work I think
     Parameters
     ----------
     make_obs_ph: str -> tf.placeholder or TfInput
@@ -550,7 +549,7 @@ def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
 
         probs_next_task_state = tf.tensordot(next_task_probs_ph, transition_mat_ph, axes=1)
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, next_task_probs_ph, transition_mat_ph],
-                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps],
+                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, q_values],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
@@ -612,7 +611,7 @@ def build_act_ltl_test_sample(make_obs_ph, q_func, num_actions, num_task_states,
         output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, task_state_ph],
-                         outputs=[output_actions, update_eps_expr, eps],
+                         outputs=[output_actions, update_eps_expr, eps, q_values],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
@@ -662,6 +661,9 @@ def build_act_ltl_test(make_obs_ph, q_func, num_actions,
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
 
         # if reshaped, q_values would be [-1, num_task_states, num_actions]
+        q_values_reshaped = tf.reshape(q_values, [-1, num_task_states, num_actions])
+
+        # choose deterministic actions
         deterministic_actions = tf.argmax(q_values, axis=-1) % num_actions
 
         batch_size = tf.shape(observations_ph.get())[0]
@@ -672,7 +674,7 @@ def build_act_ltl_test(make_obs_ph, q_func, num_actions,
         output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
-                         outputs=[output_actions, update_eps_expr, eps],
+                         outputs=[output_actions, update_eps_expr, eps, q_values_reshaped],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
