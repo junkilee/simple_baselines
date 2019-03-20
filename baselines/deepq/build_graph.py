@@ -549,7 +549,7 @@ def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
 
         probs_next_task_state = tf.tensordot(next_task_probs_ph, transition_mat_ph, axes=1)
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, next_task_probs_ph, transition_mat_ph],
-                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, q_values],
+                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, expected_q_values_across_states],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
