@@ -70,6 +70,9 @@ class ReplayBuffer(object):
 
 
 class ReplayBufferGLTL(ReplayBuffer):
+    def __init__(self, size):
+        super(ReplayBuffer, self).__init__(size)
+
     def add(self, obs_t, action, reward, obs_tp1, done, trans_mat):
         data = (obs_t, action, reward, obs_tp1, done, trans_mat)
 
