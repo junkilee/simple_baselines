@@ -222,7 +222,7 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 #     env = FrameStack(env, 4)
 #     env = ClippedRewardsWrapper(env)
 #     return env
-def wrap_dqn(env, noop=None, clip=True, skip=4, episodic=True, ltl_exp=None, collect_images=False, testing=False):
+def wrap_dqn(env, noop=None, clip=True, skip=4, episodic=True, ltl_exp=None, collect_images=False, testing=False, logger=None):
     """Apply a common set of wrappers for Atari games."""
     assert 'NoFrameskip' in env.spec.id
     if episodic:
@@ -235,7 +235,7 @@ def wrap_dqn(env, noop=None, clip=True, skip=4, episodic=True, ltl_exp=None, col
     if collect_images:
         env = RawImageCollectionWrapper(env)
     if ltl_exp is not None:
-        env = LTLWrapper(env, ltl_exp, sample_task_states=testing)
+        env = LTLWrapper(env, ltl_exp, sample_task_states=testing, logger=logger)
     env = ProcessFrame84(env)
     env = FrameStack(env, 4)
     if clip:
