@@ -549,7 +549,81 @@ def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
 
         probs_next_task_state = tf.tensordot(next_task_probs_ph, transition_mat_ph, axes=1)
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, next_task_probs_ph, transition_mat_ph],
-                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, expected_q_values_across_states],
+                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, expected_q_values_across_states, q_values],
+                         givens={update_eps_ph: -1.0, stochastic_ph: True},
+                         updates=[update_eps_expr])
+        return act
+
+def build_act_ltl_test_init(make_obs_ph, q_func, num_actions,
+                       num_task_states, scope="deepq", reuse=None):
+    # TODO: REMOVE WHEN NO LONGER NEEDED #
+
+    """Creates the act function:
+    EXPECTATION-BASED
+    Parameters
+    ----------
+    make_obs_ph: str -> tf.placeholder or TfInput
+        a function that take a name and creates a placeholder of input with that name
+    q_func: (tf.Variable, int, str, bool) -> tf.Variable
+        the model that takes the following inputs:
+            observation_in: object
+                the output of observation placeholder
+            num_actions: int
+                number of actions
+            scope: str
+            reuse: bool
+                should be passed to outer variable scope
+        and returns a tensor of shape (batch_size, num_actions) with values of every action.
+    num_actions: int
+        number of actions.
+    num_task_states: int
+        number of states in task MDP
+    scope: str or VariableScope
+        optional scope for variable_scope.
+    reuse: bool or None
+        whether or not the variables should be reused. To be able to reuse the scope must be given.
+
+    Returns
+    -------
+    act: (tf.Variable, bool, float) -> tf.Variable
+        function to select and action given observation.
+`       See the top of the file for details.
+    """
+    with tf.variable_scope(scope, reuse=reuse):
+        observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
+        stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
+        update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
+
+        # TODO: get next_task_probs_ph, transition_mat_ph to actually be fed into here.
+        next_task_probs_ph = tf.placeholder(tf.float32, [num_task_states], name="next_task_probs")
+        transition_mat_ph = tf.placeholder(tf.float32, [num_task_states, num_task_states], name="trans_mat_test")
+        print("transition_mat_ph shape:", transition_mat_ph.shape)
+        print("next_task_probs_ph shape:", next_task_probs_ph.shape)
+
+        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
+
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
+        # q_values shape: [-1, num_task_states, num_actions] # TODO should it be -1?
+        q_values = tf.reshape(q_values, [-1, num_task_states, num_actions])
+
+        # expected_q_values_across_states shape: [1, num_actions] #TODO  figure out the actual matrix mult.
+        expected_q_values_across_states = tf.tensordot(next_task_probs_ph, q_values, axes=[0, 1])
+        init_q_values = q_values[:, 1, :]
+
+        print("init_q_values shape:", init_q_values.shape)
+        deterministic_actions = tf.argmax(init_q_values, axis=-1)
+
+        batch_size = tf.shape(observations_ph.get())[0]
+        random_actions = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=num_actions, dtype=tf.int64)
+        chose_random = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=1, dtype=tf.float32) < eps
+        stochastic_actions = tf.where(chose_random, random_actions, deterministic_actions)
+
+        output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
+        update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
+
+        probs_next_task_state = tf.tensordot(next_task_probs_ph, transition_mat_ph, axes=1)
+        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph, next_task_probs_ph, transition_mat_ph],
+                         outputs=[output_actions, probs_next_task_state, update_eps_expr, eps, init_q_values, q_values],
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
@@ -998,7 +1072,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
         # generate reward matrix (encoding R(x, x') formula)
         reward_mat = np.zeros([num_task_states, num_task_states])
-        for x in range(1, num_task_states - 1):
+        for x in range(1, num_task_states - 1): # UHHHHH TODO TODO TODO THIS CAN'T BE RIGHT
             reward_mat[x][acc_index] = 1
 
         # shape: [bs, num_task_states, num_task_states], [num_task_states, num_task_states]
