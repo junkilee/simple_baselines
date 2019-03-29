@@ -894,7 +894,7 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
         return act_f, train, update_target, {'q_values': q_values}
 
 
-def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, acc_index, action_sel="argmax", grad_norm_clipping=None, gamma=1.0,
+def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, acc_index, rej_index, action_sel="argmax", grad_norm_clipping=None, gamma=1.0,
                     double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
     """Creates the train function:
 
@@ -1072,9 +1072,11 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
         # generate reward matrix (encoding R(x, x') formula)
         reward_mat = np.zeros([num_task_states, num_task_states])
-        for x in range(1, num_task_states - 1): # UHHHHH TODO TODO TODO THIS CAN'T BE RIGHT
-            reward_mat[x][acc_index] = 1
+        for x in range(0, num_task_states):
+            if x != rej_index and x != acc_index:
+                reward_mat[x][acc_index] = 1
 
+        print("reward_mat:", reward_mat)
         # shape: [bs, num_task_states, num_task_states], [num_task_states, num_task_states]
         #           -> [bs, num_task_states]
         reward_x = tf.reduce_sum(tf.multiply(transition_mats_ph, reward_mat), axis=2)
