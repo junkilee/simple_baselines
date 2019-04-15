@@ -2,27 +2,27 @@ import tensorflow as tf
 import numpy as np
 
 with tf.Session() as sess:
-    # rewards
-    a = [[[1,2],[3,4]], [[5,6],[7,8]]]
-    b = [[1, 2], [3, 4]]
-    # print(tf.reduce_sum(tf.multiply(a, b), axis = 2).eval())
-
-    a_real_f = np.array(
-        [[1., 0., 0.],
-         [0., 0.99, 0.01],
-         [0., 0., 1.]])
-    a_real_t = np.array(
-        [[1., 0., 0.],
-         [1., 0., 0.],
-         [0., 0., 1.]])
-    a_real = tf.stack([a_real_f, a_real_t])
-
-    reward_mat = np.array(
-        [[0., 0., 0.],
-         [1., 0., 0.],
-         [0., 0., 0.]])
-
-    print(tf.multiply(a_real_t, reward_mat).eval())
+    # # rewards
+    # a = [[[1,2],[3,4]], [[5,6],[7,8]]]
+    # b = [[1, 2], [3, 4]]
+    # # print(tf.reduce_sum(tf.multiply(a, b), axis = 2).eval())
+    #
+    # a_real_f = np.array(
+    #     [[1., 0., 0.],
+    #      [0., 0.99, 0.01],
+    #      [0., 0., 1.]])
+    # a_real_t = np.array(
+    #     [[1., 0., 0.],
+    #      [1., 0., 0.],
+    #      [0., 0., 1.]])
+    # a_real = tf.stack([a_real_f, a_real_t])
+    #
+    # reward_mat = np.array(
+    #     [[0., 0., 0.],
+    #      [1., 0., 0.],
+    #      [0., 0., 0.]])
+    #
+    # print(tf.multiply(a_real_t, reward_mat).eval())
     # print(tf.reduce_sum(tf.multiply(a_real, reward_mat), axis = 2).eval())
     # expected result: [[0, 0, 0],
     #                   [0, 1, 0]]
@@ -154,4 +154,10 @@ with tf.Session() as sess:
     # # expected next_p:
     # # [0.55, 0.45]
     # print("Next probabilities:", next_p.eval())
+
+    p_np = np.array([0.5, 0.5])
+    trans_mat_np = np.array([[0.1, 0.9], [1, 0]])
+    next_p_np = np.matmul(p_np, trans_mat_np)
+    # expected next_p_np  = [0.55, 0.45]
+    print("Next probabilities:", next_p_np)
 

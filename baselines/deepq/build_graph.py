@@ -484,6 +484,7 @@ def build_act_ltl_expectation(make_obs_ph,
                          updates=[update_eps_expr])
         return act
 
+
 def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
                        num_task_states, scope="deepq", reuse=None):
     """Creates the act function:
@@ -491,7 +492,7 @@ def build_act_ltl_test_expectation(make_obs_ph, q_func, num_actions,
     Parameters
     ----------
     make_obs_ph: str -> tf.placeholder or TfInput
-        a function that take a name and creates a placeholder of input with that name
+        a function that take  a name and creates a placeholder of input with that name
     q_func: (tf.Variable, int, str, bool) -> tf.Variable
         the model that takes the following inputs:
             observation_in: object
