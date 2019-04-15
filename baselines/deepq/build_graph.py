@@ -205,10 +205,7 @@ def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, 
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0.0))
 
-        q_func_results = q_func(observations_ph.get(), num_actions, scope="q_func")
-        q_values = q_func_results['q']
-        s_value = q_func_results['s']
-        a_values = q_func_results['a']
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
         deterministic_actions = tf.argmax(q_values, axis=1)
 
         batch_size = tf.shape(observations_ph.get())[0]
@@ -219,7 +216,7 @@ def build_test_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, 
         output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
         act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
-                         outputs=[output_actions, q_values, s_value, a_values, update_eps_expr],
+                         outputs=[output_actions, q_values, update_eps_expr],
                          givens={update_eps_ph: test_epsilon, stochastic_ph: False},
                          updates=[update_eps_expr])
         return act

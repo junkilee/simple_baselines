@@ -12,7 +12,7 @@ def layer_norm_fn(x, relu=True):
 def model(img_in, num_actions, scope, nlayers=3, hidden_units=512, channel_factor=1,
           reuse=False, layer_norm=False, freeze_cnn=False, use_ltl_wrapper=False, num_task_states=1):
     """As described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf"""
-    assert(num_task_states != use_ltl_wrapper)
+    # assert(num_task_states != use_ltl_wrapper)
     with tf.variable_scope(scope, reuse=reuse):
         out = img_in
         with tf.variable_scope("convnet"):
