@@ -155,9 +155,30 @@ with tf.Session() as sess:
     # # [0.55, 0.45]
     # print("Next probabilities:", next_p.eval())
 
-    p_np = np.array([0.5, 0.5])
-    trans_mat_np = np.array([[0.1, 0.9], [1, 0]])
-    next_p_np = np.matmul(p_np, trans_mat_np)
-    # expected next_p_np  = [0.55, 0.45]
-    print("Next probabilities:", next_p_np)
+    # # alternate way to compute next probabilities using np
+    # p_np = np.array([0.5, 0.5])
+    # trans_mat_np = np.array([[0.1, 0.9], [1, 0]])
+    # next_p_np = np.matmul(p_np, trans_mat_np)
+    # # expected next_p_np  = [0.55, 0.45]
+    # print("Next probabilities:", next_p_np)
 
+    # mask out rej, acc q_values
+    q_values = tf.constant([[4., 5, 6],
+                [7, 8, 9],
+                [4, 125, 6],
+                [72, 81, 91]])
+    acc_ind = 0
+    rej_ind = 2
+    num_task_states = 3
+    col = 1
+    # mask = np.ones(num_task_states)
+    print("tf.ones:", tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
+    print("col * tf.ones:", col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
+    print("q_values -1 shape:", q_values.get_shape()[-1])
+    mask = tf.one_hot(col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32),
+                      q_values.get_shape()[-1])
+    print("mask:", mask.eval())
+    result = q_values * mask
+    print(result.eval())
+    # res_q =
+    # print(res_q.eval())

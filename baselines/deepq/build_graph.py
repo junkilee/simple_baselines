@@ -1167,17 +1167,23 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         #       But then does it make sense trying to calculate Q((s, REJ), a) if s s.t. x = acc?
         #       Are we doing a lot of wasted computation?
         #       Terminate only at "reasonable" number of steps (according to ML).
-        #       Hmmmmmmmmmm...
-        #       blabber blabber blabber?
         #       if x == acc, then done = True
         #           *does this even make sense? bc we're iterating through all x?
         #       So only terminate upon acc?
-        #       if x == rej,
-        #       blabber blabber blabber!
+        #       No, this doesn't make sense because we're not tracking which state we're actually in.
+
 
         # dims: [bs, num_task_states]
         q_t_selected_target = reward_x + gamma * q_tp1_best_masked_xprime_expectation
         print("q_t_selected_target shape:", q_t_selected_target.shape)
+
+        def mask_terminal_q_vals_HARDCODED(q_vals, init_ind):
+            mask = tf.one_hot(init_ind * tf.ones((tf.shape(q_vals)[0],), dtype=tf.int32),
+                              q_vals.get_shape()[-1])
+            return q_vals * mask
+
+        # mask target q_values of rej, acc state to be 0.
+        q_t_selected_target = mask_terminal_q_vals_HARDCODED(q_t_selected_target, 1) # TODO REMOVE THIS HARDCODING ASAP
 
         """
         BIGGEST QUESTION NOW:
@@ -1196,14 +1202,12 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
             Cons:
              You're gonna have to edit the other wrappers to do stuff and actually work when the 
              state is a tuple not just a single nparray thing.
-        3. OOH! Put it in the info!!! YES! SO MUCH EASIER!!
+        3. Put task state into the info
             info["task_state"] = x
             Does this work with the making state 4 images thing? Well, info 
              should just be independent of all of that so hopefully it will still work. i.e. the 4 images thing
              is just an INJECTIVE function of your current 210x160x3 state, so 
-             when you set info["task_state"] to x, that should correspond to the correct x. WOOOHOO!!!!!
-
-            
+             when you set info["task_state"] to x, that should correspond to the correct x. Nice!
         """
 
         # For predicted Q((s, x), a):
