@@ -891,6 +891,10 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
 
         return act_f, train, update_target, {'q_values': q_values}
 
+def mask_terminal_q_vals_HARDCODED(q_vals, init_ind):
+    mask = tf.one_hot(init_ind * tf.ones((tf.shape(q_vals)[0],), dtype=tf.int32),
+                      q_vals.get_shape()[-1])
+    return q_vals * mask
 
 def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, acc_index, rej_index, action_sel="argmax", grad_norm_clipping=None, gamma=1.0,
                     double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
@@ -1021,6 +1025,9 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         q_tp1_best_masked = tf.transpose((1.0 - done_mask_ph) * tf.transpose(q_tp1_best))  # is this necessary?
         print("q_tp1_best_masked shape:", q_tp1_best_masked.shape)
         print("transition_mats_ph shape:", transition_mats_ph.shape)
+
+        # mask away when x' is in terminal state
+        q_tp1_best_masked = mask_terminal_q_vals_HARDCODED(q_tp1_best_masked, 1)
 
         q_tp1_best_masked_xprime_expectation = tf.transpose(tf.reduce_sum(
             tf.multiply(tf.transpose(transition_mats_ph, [1, 0, 2]),
@@ -1177,10 +1184,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         q_t_selected_target = reward_x + gamma * q_tp1_best_masked_xprime_expectation
         print("q_t_selected_target shape:", q_t_selected_target.shape)
 
-        def mask_terminal_q_vals_HARDCODED(q_vals, init_ind):
-            mask = tf.one_hot(init_ind * tf.ones((tf.shape(q_vals)[0],), dtype=tf.int32),
-                              q_vals.get_shape()[-1])
-            return q_vals * mask
+
 
         # mask target q_values of rej, acc state to be 0.
         q_t_selected_target = mask_terminal_q_vals_HARDCODED(q_t_selected_target, 1) # TODO REMOVE THIS HARDCODING ASAP
