@@ -170,15 +170,24 @@ with tf.Session() as sess:
     acc_ind = 0
     rej_ind = 2
     num_task_states = 3
-    col = 1
-    # mask = np.ones(num_task_states)
-    print("tf.ones:", tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
-    print("col * tf.ones:", col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
-    print("q_values -1 shape:", q_values.get_shape()[-1])
-    mask = tf.one_hot(col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32),
-                      q_values.get_shape()[-1])
-    print("mask:", mask.eval())
+    # col = 1
+    # # mask = np.ones(num_task_states)
+    # print("tf.ones:", tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
+    # print("col * tf.ones:", col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32).eval())
+    # print("q_values -1 shape:", q_values.get_shape()[-1])
+    # mask = tf.one_hot(col * tf.ones((tf.shape(q_values)[0],), dtype=tf.int32),
+    #                   q_values.get_shape()[-1])
+    # print("mask:", mask.eval())
+    # result = q_values * mask
+    # print(result.eval())
+
+    col_to_zero = [acc_ind, rej_ind]  # <-- column numbers you want to be zeroed out
+    tnsr_shape = tf.shape(q_values)
+    mask = [tf.one_hot(col_num * tf.ones((tnsr_shape[0],), dtype=tf.int32), tnsr_shape[-1])
+            for col_num in col_to_zero]
+    mask = tf.reduce_sum(mask, axis=0)
+    mask = tf.cast(tf.logical_not(tf.cast(mask, tf.bool)), tf.float32)
+
     result = q_values * mask
     print(result.eval())
-    # res_q =
-    # print(res_q.eval())
+

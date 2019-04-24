@@ -891,9 +891,14 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
 
         return act_f, train, update_target, {'q_values': q_values}
 
-def mask_terminal_q_vals_HARDCODED(q_vals, init_ind):
-    mask = tf.one_hot(init_ind * tf.ones((tf.shape(q_vals)[0],), dtype=tf.int32),
-                      q_vals.get_shape()[-1])
+def mask_terminal_q_vals(q_vals, acc_ind, rej_ind):
+    col_to_zero = [acc_ind, rej_ind]  # <-- column numbers you want to be zeroed out
+    tnsr_shape = tf.shape(q_vals)
+    mask = [tf.one_hot(col_num * tf.ones((tnsr_shape[0],), dtype=tf.int32), tnsr_shape[-1])
+            for col_num in col_to_zero]
+    mask = tf.reduce_sum(mask, axis=0)
+    mask = tf.cast(tf.logical_not(tf.cast(mask, tf.bool)), tf.float32)
+
     return q_vals * mask
 
 def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer, acc_index, rej_index, action_sel="argmax", grad_norm_clipping=None, gamma=1.0,
@@ -1027,7 +1032,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
         print("transition_mats_ph shape:", transition_mats_ph.shape)
 
         # mask away when x' is in terminal state
-        q_tp1_best_masked = mask_terminal_q_vals_HARDCODED(q_tp1_best_masked, 1)
+        q_tp1_best_masked = mask_terminal_q_vals(q_tp1_best_masked, acc_index, rej_index)
 
         q_tp1_best_masked_xprime_expectation = tf.transpose(tf.reduce_sum(
             tf.multiply(tf.transpose(transition_mats_ph, [1, 0, 2]),
@@ -1187,7 +1192,7 @@ def build_train_ltl(make_obs_ph, q_func, num_actions, num_task_states, optimizer
 
 
         # mask target q_values of rej, acc state to be 0.
-        q_t_selected_target = mask_terminal_q_vals_HARDCODED(q_t_selected_target, 1) # TODO REMOVE THIS HARDCODING ASAP
+        q_t_selected_target = mask_terminal_q_vals(q_t_selected_target, acc_index, rej_index)
 
         """
         BIGGEST QUESTION NOW:
